@@ -6,16 +6,16 @@ Member CSV format:
 Columns: 
 1. Full Name
 2. Full Discord Tag (***#1234)
-3. Primary Role
-4. Secondary Role
+3. Email
+4. Premade Role
 5. Are you already part of a pre-made pitched team?	
 6. Which team are you part of as a pre-made member?
 7. 1st choice
 8. 2nd choice
 9. 3rd choice	
-10. Choices for (Primary or Secondary Role) [1st Choice]
-11. Choices for (Primary or Secondary Role) [2nd Choice]
-12. Choices for (Primary or Secondary Role) [3rd Choice]
+10. Role [1st Choice]
+11. Role [2nd Choice]
+12. Role [3rd Choice]
 
 Team Lead CSV format:
 Columns: 
@@ -26,6 +26,8 @@ Columns:
 
 PRIMARY = "Primary role"
 NO_PREFERENCE = "No Preference"
+ANY_TEAM = "Put me on any team"
+NO_OTHER_TEAMS = "If I do not receive my previous choice, do not assign me to a team."
 
 
 def main(member_csv, teamlead_csv):
@@ -34,12 +36,15 @@ def main(member_csv, teamlead_csv):
     member_df = pd.read_csv(member_csv)
     teamlead_df = pd.read_csv(teamlead_csv)
 
+    # Get any member list
+    get_all_any_teams(member_df)
+
     # Assign all premades
     for index, row in member_df.iterrows():
 
         # assign all pre-mades
         if not pd.isna(row[5]):
-            team_assignments.append([row[0], row[1], row[5], row[2], "Pre-made"])
+            team_assignments.append([row[0], row[1], row[5], row[3], "Pre-made"])
             teamlead_df = drop_from_csv(teamlead_df, row[1])
             member_df = member_df.drop(index)
 
@@ -49,26 +54,22 @@ def main(member_csv, teamlead_csv):
                 # Check if discords are the same and their first pick is the same (including roles)
                 if row2[0] == row[1] and row2[1] == row[6]:
 
-                    # If no preference, check either primary or secondary roles
-                    if (row[9] == NO_PREFERENCE and (row2[2] == row[2] or row2[2] == row[3])):
+                    # If the roles match, immediately add
+                    if row[9] == row2[2]:
+                        # Adds Name, Discord Tag, 1st Choice Game, Requested Role
                         team_assignments.append([row[0], row[1], row[6], row2[2], "Requested"])
                         teamlead_df = drop_from_csv(teamlead_df, row[1])
                         member_df = member_df.drop(index)
 
-                    # Otherwise check primary or secondary roles match
-                    elif row2[2] == (row[2] if row[9] == PRIMARY else row[3]):
-                        team_assignments.append([row[0], row[1], row[6], row[2] if row[9] == PRIMARY else row[3], "Requested"])
-                        teamlead_df = drop_from_csv(teamlead_df, row[1])
-                        member_df = member_df.drop(index)
-
-                    # Leftover means roles don't match! Alert user!
+                    # Roles don't match! Alert user!
                     else:
                         print(
-                            f"{row[0]} wants a different role for {row[6]}! Requested to be {row[2] if row[9] == PRIMARY else row[3]} but team lead wants {row2[2]}")
+                            f"{row[0]} wants a different role for {row[6]}! Requested to be {row[9]} but team lead wants {row2[2]}")
 
-    # Assign everyone their first choice
+    # Assign everyone else their first choice
     for index, row in member_df.iterrows():
-        team_assignments.append([row[0], row[1], row[6], row[2] if row[9] == PRIMARY else row[3], "Student First Choice"])
+        # Adds Name, Discord Tag, 1st Choice Game, 1st Choice Role
+        team_assignments.append([row[0], row[1], row[6], row[9], "Student First Choice"])
         teamlead_df = drop_from_csv(teamlead_df, row[1])
         pass
 
@@ -82,6 +83,31 @@ def main(member_csv, teamlead_csv):
     pass1_csv = pass1_csv.sort_values(['Game', 'Reason', 'Position', 'Name'])
     pass1_csv.to_csv("out.csv")
 
+
+def get_all_any_teams(member_df):
+    '''
+    writes a csv with all members who put down any team in any choice
+
+    :param member_df: dataframe of members
+    :return: nothing
+    '''
+    any_team_members = []
+
+    # iterate through all members and make a list of all any teams
+    for index, row in member_df.iterrows():
+        if row[6] == ANY_TEAM:
+            # Adds Name, Discord Tag, which choice is any choice
+            any_team_members.append([row[0], row[1], "1st Choice Any Choice"])
+        elif row[7] == ANY_TEAM:
+            any_team_members.append([row[0], row[1], "2nd Choice Any Choice"])
+        elif row[8] == ANY_TEAM:
+            any_team_members.append([row[0], row[1], "3rd Choice Any Choice"])
+        # Convert to csv and sort
+    nparray = np.array(any_team_members)
+    pass1_csv = pd.DataFrame(nparray)
+    pass1_csv = pass1_csv.set_axis(['Name', 'Discord', 'Any team Choice'], axis=1)
+    pass1_csv = pass1_csv.sort_values(['Any team Choice', 'Name'])
+    pass1_csv.to_csv("AnyChoicePeople.csv")
 
 def drop_from_csv(df, discord):
     '''
