@@ -28,16 +28,17 @@ PRIMARY = "Primary role"
 NO_PREFERENCE = "No Preference"
 ANY_TEAM = "Put me on any team"
 NO_OTHER_TEAMS = "If I do not receive my previous choice, do not assign me to a team."
-
+SCORE_MATRIX = [1, 3, 6, 20]
 
 def main(member_csv, teamlead_csv):
     team_assignments = []
+    current_team_counts = {}
 
     member_df = pd.read_csv(member_csv)
     teamlead_df = pd.read_csv(teamlead_csv)
 
     # Get any member list
-    get_all_any_teams(member_df)
+    # get_all_any_teams(member_df)
 
     # Assign all premades
     for index, row in member_df.iterrows():
@@ -66,22 +67,52 @@ def main(member_csv, teamlead_csv):
                         print(
                             f"{row.iloc[0]} wants a different role for {row.iloc[6]}! Requested to be {row[9]} but team lead wants {row2[2]}")
 
+    # For each game and role, get current total number of taken positions
+
+    for team_mem in team_assignments:
+        # If they are a premade, pass. They don't count towards totals
+        if team_mem[4] == "Pre-made":
+            continue
+
+        # The key is the game name, followed by a space, then the role
+        key = f"{team_mem[2]} {team_mem[3]}"
+
+        # if not initialized, add it
+        if key in current_team_counts:
+            current_team_counts[key] += 1
+        else:
+            current_team_counts[key] = 1
+
+    for key in current_team_counts:
+        print(f"{key}: {current_team_counts[key]}")
+    print(len(current_team_counts))
+
+"""
+    From previous Version
+
     # Assign everyone else their first choice
     for index, row in member_df.iterrows():
         # Adds Name, Discord Tag, 1st Choice Game, 1st Choice Role
         team_assignments.append([row.iloc[0], row.iloc[1], row.iloc[6], row.iloc[9], "Student First Choice"])
         teamlead_df = drop_from_csv(teamlead_df, row.iloc[1])
         pass
+"""
 
-    # Save remaining team lead choices for inspection later
-    teamlead_df.to_csv("leftover_team_choices.csv")
 
-    # Convert to csv and sort
-    nparray = np.array(team_assignments)
-    pass1_csv = pd.DataFrame(nparray)
-    pass1_csv = pass1_csv.set_axis(['Name', 'Discord', 'Game', 'Position', 'Reason'], axis=1)
-    pass1_csv = pass1_csv.sort_values(['Game', 'Reason', 'Position', 'Name'])
-    pass1_csv.to_csv("out.csv")
+
+
+
+
+
+    # # Save remaining team lead choices for inspection later
+    # teamlead_df.to_csv("leftover_team_choices.csv")
+    #
+    # # Convert to csv and sort
+    # nparray = np.array(team_assignments)
+    # pass1_csv = pd.DataFrame(nparray)
+    # pass1_csv = pass1_csv.set_axis(['Name', 'Discord', 'Game', 'Position', 'Reason'], axis=1)
+    # pass1_csv = pass1_csv.sort_values(['Game', 'Reason', 'Position', 'Name'])
+    # pass1_csv.to_csv("out.csv")
 
 
 def get_all_any_teams(member_df):
