@@ -63,8 +63,7 @@ def main(member_csv, teamlead_csv):
 
                     # Roles don't match! Alert user!
                     else:
-                        print(
-                            f"{row.iloc[0]} wants a different role for {row.iloc[6]}! Requested to be {row[9]} but team lead wants {row2[2]}")
+                        print(f"{row.iloc[0]} wants a different role for {row.iloc[6]}! Requested to be {row.iloc[9]} but team lead wants {row2.iloc[2]}")
 
     # Assign everyone else their first choice
     for index, row in member_df.iterrows():
@@ -126,3 +125,4 @@ def drop_from_csv(df, discord):
 
 if __name__ == '__main__':
     main('Spring 2024 Game Sign Up Form (Responses) - Sort Form.csv', 'Spring 2024 Team Lead Mixer Sheet - Final Mixer Sheet.csv')
+
