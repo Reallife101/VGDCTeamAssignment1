@@ -107,171 +107,154 @@ def main(member_csv, teamlead_csv, max_team_count):
     # --- Go through each row and assign people spots as long as theres space ---
     # Grade the assignment as well
 
-    best_score = 99999999
-    best_assignment = []
-    prev_assignment = [row[:] for row in team_assignments]
-    prev_teamlead = teamlead_df.copy()
-    current_spots_left_copy = current_spots_left.copy()
+    score = 0
+    random_member_df = member_df.sample(frac=1)
 
-    for i in range(1000):
-        score = 0
-        team_assignments = [row[:] for row in prev_assignment]
-        teamlead_df = prev_teamlead.copy()
-        current_spots_left = current_spots_left_copy.copy()
+    for index, row in random_member_df.iterrows():
 
-        random_member_df = member_df.sample(frac=1, random_state=i)
+        has_been_assigned = False
 
-        for index, row in random_member_df.iterrows():
+        # --------- Start with Choice #1 ---------
+        # Split up base on possible roles
+        for role in row.iloc[9].split(", "):
+            # The key is the game name, followed by a space, then the role
+            key = f"{row.iloc[6]} {role}"
 
-            has_been_assigned = False
+            # if theres space, assign
+            if current_spots_left[key] > 0:
+                # Adds Name, Discord Tag, 1st Choice Game, Role
+                team_assignments.append([row.iloc[0], row.iloc[1], row.iloc[6], role, "Student First Choice"])
+                teamlead_df = drop_from_csv(teamlead_df, row.iloc[1])
 
-            # --------- Start with Choice #1 ---------
+                # decrease spots
+                current_spots_left[key] -= 1
+
+                # add score accordingly
+                if "If I do not receive my previous choice, do not assign me to a team" in row.iloc[6]:
+                    score += SCORE_MATRIX[4]
+                else:
+                    score += SCORE_MATRIX[0]
+
+                has_been_assigned = True
+                break
+
+        # If has been assigned, go to next person
+        if has_been_assigned:
+            continue
+
+        # --------- Choice #2 ---------
+        # Split up base on possible roles
+        for role in row.iloc[10].split(", "):
+            # The key is the game name, followed by a space, then the role
+            key = f"{row.iloc[7]} {role}"
+
+            # if theres space, assign
+            if current_spots_left[key] > 0:
+                # Adds Name, Discord Tag, 1st Choice Game, Role
+                team_assignments.append([row.iloc[0], row.iloc[1], row.iloc[7], role, "Student Second Choice"])
+                teamlead_df = drop_from_csv(teamlead_df, row.iloc[1])
+
+                # decrease spots
+                current_spots_left[key] -= 1
+
+                # add score accordingly
+                if "If I do not receive my previous choice, do not assign me to a team" in row.iloc[7]:
+                    score += SCORE_MATRIX[4]
+                else:
+                    score += SCORE_MATRIX[1]
+                has_been_assigned = True
+                break
+
+        # If has been assigned, go to next person
+        if has_been_assigned:
+            continue
+
+        # --------- Choice #3 ---------
+        # Split up base on possible roles
+        for role in row.iloc[11].split(", "):
+            # The key is the game name, followed by a space, then the role
+            key = f"{row.iloc[8]} {role}"
+
+            # if theres space, assign
+            if current_spots_left[key] > 0:
+                # Adds Name, Discord Tag, 1st Choice Game, Role
+                team_assignments.append([row.iloc[0], row.iloc[1], row.iloc[8], role, "Student Third Choice"])
+                teamlead_df = drop_from_csv(teamlead_df, row.iloc[1])
+
+                # decrease spots
+                current_spots_left[key] -= 1
+
+                # add score accordingly
+                if "If I do not receive my previous choice, do not assign me to a team" in row.iloc[8]:
+                    score += SCORE_MATRIX[4]
+                else:
+                    score += SCORE_MATRIX[2]
+                has_been_assigned = True
+                break
+
+        # If has been assigned, go to next person
+        if has_been_assigned:
+            continue
+
+        # --------- Choice #4+ ---------
+        # Check if is nan
+        if pd.isna(row.iloc[12]):
+            # If is Nan, print error and move on
+            print(f"Warning: {row.iloc[0]} did not get 1st, 2nd, or 3rd choice, and does not have 4+ choice")
+            print(f"Games: {row.iloc[6]} {row.iloc[9]}, {row.iloc[7]} {row.iloc[10]}, {row.iloc[8]} {row.iloc[11]}")
+            continue
+
+        # Split up base on possible game
+        for game in row.iloc[12].split(", "):
             # Split up base on possible roles
-            for role in row.iloc[9].split(", "):
+            for role in row.iloc[13].split(", "):
+                # print(f"{row.iloc[0]}: {game} {role}")
                 # The key is the game name, followed by a space, then the role
-                key = f"{row.iloc[6]} {role}"
+                key = f"{game} {role}"
 
                 # if theres space, assign
                 if current_spots_left[key] > 0:
                     # Adds Name, Discord Tag, 1st Choice Game, Role
-                    team_assignments.append([row.iloc[0], row.iloc[1], row.iloc[6], role, "Student First Choice"])
+                    team_assignments.append([row.iloc[0], row.iloc[1], game, role, "Student Fourth+ Choice"])
                     teamlead_df = drop_from_csv(teamlead_df, row.iloc[1])
 
                     # decrease spots
                     current_spots_left[key] -= 1
 
                     # add score accordingly
-                    if "If I do not receive my previous choice, do not assign me to a team" in row.iloc[6]:
+                    if "If I do not receive my previous choice, do not assign me to a team" in game:
                         score += SCORE_MATRIX[4]
                     else:
-                        score += SCORE_MATRIX[0]
-
+                        score += SCORE_MATRIX[3]
                     has_been_assigned = True
                     break
 
             # If has been assigned, go to next person
             if has_been_assigned:
-                continue
+                break
 
-            # --------- Choice #2 ---------
-            # Split up base on possible roles
-            for role in row.iloc[10].split(", "):
-                # The key is the game name, followed by a space, then the role
-                key = f"{row.iloc[7]} {role}"
+        # If has been assigned, go to next person
+        if has_been_assigned:
+            continue
 
-                # if theres space, assign
-                if current_spots_left[key] > 0:
-                    # Adds Name, Discord Tag, 1st Choice Game, Role
-                    team_assignments.append([row.iloc[0], row.iloc[1], row.iloc[7], role, "Student Second Choice"])
-                    teamlead_df = drop_from_csv(teamlead_df, row.iloc[1])
+        # --- If we get here, they didn't get their first, second or third choice ---
+        print(f"Warning: {row.iloc[0]} did not get 1st, 2nd, 3rd, or 4+ choice")
+        print(f"Games: {row.iloc[6]} {row.iloc[9]}, {row.iloc[7]} {row.iloc[10]}, {row.iloc[8]} {row.iloc[11]},"
+              f" {row.iloc[12]} {row.iloc[13]}")
 
-                    # decrease spots
-                    current_spots_left[key] -= 1
-
-                    # add score accordingly
-                    if "If I do not receive my previous choice, do not assign me to a team" in row.iloc[7]:
-                        score += SCORE_MATRIX[4]
-                    else:
-                        score += SCORE_MATRIX[1]
-                    has_been_assigned = True
-                    break
-
-            # If has been assigned, go to next person
-            if has_been_assigned:
-                continue
-
-            # --------- Choice #3 ---------
-            # Split up base on possible roles
-            for role in row.iloc[11].split(", "):
-                # The key is the game name, followed by a space, then the role
-                key = f"{row.iloc[8]} {role}"
-
-                # if theres space, assign
-                if current_spots_left[key] > 0:
-                    # Adds Name, Discord Tag, 1st Choice Game, Role
-                    team_assignments.append([row.iloc[0], row.iloc[1], row.iloc[8], role, "Student Third Choice"])
-                    teamlead_df = drop_from_csv(teamlead_df, row.iloc[1])
-
-                    # decrease spots
-                    current_spots_left[key] -= 1
-
-                    # add score accordingly
-                    if "If I do not receive my previous choice, do not assign me to a team" in row.iloc[8]:
-                        score += SCORE_MATRIX[4]
-                    else:
-                        score += SCORE_MATRIX[2]
-                    has_been_assigned = True
-                    break
-
-            # If has been assigned, go to next person
-            if has_been_assigned:
-                continue
-
-            # --------- Choice #4+ ---------
-            # Check if is nan
-            if pd.isna(row.iloc[12]):
-                # If is Nan, print error and move on
-                print(f"Warning: {row.iloc[0]} did not get 1st, 2nd, or 3rd choice, and does not have 4+ choice")
-                print(f"Games: {row.iloc[6]} {row.iloc[9]}, {row.iloc[7]} {row.iloc[10]}, {row.iloc[8]} {row.iloc[11]}")
-                continue
-
-            # Split up base on possible game
-            for game in row.iloc[12].split(", "):
-                # Split up base on possible roles
-                for role in row.iloc[13].split(", "):
-                    # print(f"{row.iloc[0]}: {game} {role}")
-                    # The key is the game name, followed by a space, then the role
-                    key = f"{game} {role}"
-
-                    # if theres space, assign
-                    if current_spots_left[key] > 0:
-                        # Adds Name, Discord Tag, 1st Choice Game, Role
-                        team_assignments.append([row.iloc[0], row.iloc[1], game, role, "Student Fourth+ Choice"])
-                        teamlead_df = drop_from_csv(teamlead_df, row.iloc[1])
-
-                        # decrease spots
-                        current_spots_left[key] -= 1
-
-                        # add score accordingly
-                        if "If I do not receive my previous choice, do not assign me to a team" in game:
-                            score += SCORE_MATRIX[4]
-                        else:
-                            score += SCORE_MATRIX[3]
-                        has_been_assigned = True
-                        break
-
-                # If has been assigned, go to next person
-                if has_been_assigned:
-                    break
-
-            # If has been assigned, go to next person
-            if has_been_assigned:
-                continue
-
-            # --- If we get here, they didn't get their first, second or third choice ---
-            print(f"Warning: {row.iloc[0]} did not get 1st, 2nd, 3rd, or 4+ choice")
-            print(f"Games: {row.iloc[6]} {row.iloc[9]}, {row.iloc[7]} {row.iloc[10]}, {row.iloc[8]} {row.iloc[11]},"
-                  f" {row.iloc[12]} {row.iloc[13]}")
-
-        print(score)
-        if score < best_score:
-            best_score = score
-            best_assignment = team_assignments
-        # for key in current_spots_left:
-        #     print(f"{key}: {current_spots_left[key]}")
+    print(score)
+    # for key in current_spots_left:
+    #     print(f"{key}: {current_spots_left[key]}")
 
     # Save remaining team lead choices for inspection later
     teamlead_df.to_csv("leftover_team_choices.csv")
 
-    # print Best Score
-    print(f"Best Score found: {best_score}")
-
     # Convert to csv and sort
-    nparray = np.array(best_assignment)
+    nparray = np.array(team_assignments)
     pass1_csv = pd.DataFrame(nparray)
     pass1_csv = pass1_csv.set_axis(['Name', 'Discord', 'Game', 'Position', 'Reason'], axis=1)
     pass1_csv = pass1_csv.sort_values(['Game', 'Reason', 'Position', 'Name'])
-    pass1_csv.to_csv("ExhaustiveOutBest.csv")
+    pass1_csv.to_csv(f"SingleExhaustive({score}).csv")
 
 
 """
